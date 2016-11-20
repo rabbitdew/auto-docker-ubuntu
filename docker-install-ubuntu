@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Script to install newest Docker version on Ubuntu 14.04 as found at docs.docker.com
+# script maintained by Jon Howell
+
+sudo apt-get update
+sudo apt-get -y install apt-transport-https ca-certificates
+sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+
+echo 'deb https://apt.dockerproject.org/repo ubuntu-trusty main' > /etc/apt/sources.list.d/docker.list
+
+sudo apt-get update
+sudo apt-get purge lxc-docker
+sudo apt-cache policy docker-engine
+
+if [ $? -ne 0 ]
+then
+                echo 'docker engine repo not properly added'
+                        exit 1
+                fi
+
+sudo apt-get update
+sudo apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual
+sudo apt-get -y install docker-engine vim
+sudo service docker start
+sudo docker run hello-world
+
+
+#install docker compose
+
+curl -L https://github.com/docker/compose/releases/download/1.8.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+
+# Add yaml syntax highlighting for vim
+mkdir -p /home/vagrant/.vim
+curl -L http://www.vim.org/scripts/download_script.php?src_id=2249 > /home/vagrant/.vim/yaml.vim
+echo    'au BufNewFile,BufRead *.yaml,*.yml so ~/.vim/yaml.vim' >> /home/vagrant/.vimrc
+chown -R vagrant. /home/vagrant
+groupadd docker
+usermod -aG docker vagrant
