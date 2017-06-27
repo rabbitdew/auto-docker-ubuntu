@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Script to install newest Docker version on Ubuntu 14.04 as found at docs.docker.com
+# Also sets up elastic search and kibana with docker compose need logstash
 # script maintained by Jon Howell
 
 sudo apt-get update
@@ -36,5 +37,150 @@ mkdir -p /home/vagrant/.vim
 curl -L http://www.vim.org/scripts/download_script.php?src_id=2249 > /home/vagrant/.vim/yaml.vim
 echo    'au BufNewFile,BufRead *.yaml,*.yml so ~/.vim/yaml.vim' >> /home/vagrant/.vimrc
 chown -R vagrant. /home/vagrant
-groupadd docker
 usermod -aG docker vagrant
+
+
+# elasticsearch specific stuff
+echo 'vm.max_map_count=262144' >> /etc/sysctl.conf
+sysctl -w vm.max_map_count=262144
+
+useradd -M -s /bin/nologin elasticsearch
+mkdir -p /usr/share/elasticsearch/data
+chown elasticsearch. /usr/share/elasticsearch/data
+chmod 0644 /usr/share/elasticsearch/data
+
+useradd -M -s /bin/nologin kibana
+mkdir -p /usr/share/kibana/config/
+chown -R kibana /usr/share/kibana
+cat > /usr/share/kibana/config/kibana.yml << _EOF_
+server.name: kibana.slipsin
+server.host: "0"
+elasticsearch.url: http://elasticsearch1:9200
+elasticsearch.username: elastic
+elasticsearch.password: changeme
+xpack.monitoring.ui.container.elasticsearch.enabled: false
+_EOF_
+ 
+cat > /usr/share/kibana/config/kibana.example.org.crt << _EOF_
+-----BEGIN CERTIFICATE-----
+MIID/TCCAuWgAwIBAgIJALVJyrUvH8uGMA0GCSqGSIb3DQEBCwUAMIGUMQswCQYD
+VQQGEwJBVTERMA8GA1UECAwIVmljdG9yaWExEjAQBgNVBAcMCU1lbGJvdXJuZTEd
+MBsGA1UECgwURXhhbXBsZSBPcmdhbml6YXRpb24xGzAZBgNVBAMMEmtpYmFuYS5l
+eGFtcGxlLm9yZzEiMCAGCSqGSIb3DQEJARYTZXhhbXBsZUBleGFtcGxlLm9yZzAe
+Fw0xNjA5MTgwMzU4NTNaFw0yNjA5MTYwMzU4NTNaMIGUMQswCQYDVQQGEwJBVTER
+MA8GA1UECAwIVmljdG9yaWExEjAQBgNVBAcMCU1lbGJvdXJuZTEdMBsGA1UECgwU
+RXhhbXBsZSBPcmdhbml6YXRpb24xGzAZBgNVBAMMEmtpYmFuYS5leGFtcGxlLm9y
+ZzEiMCAGCSqGSIb3DQEJARYTZXhhbXBsZUBleGFtcGxlLm9yZzCCASIwDQYJKoZI
+hvcNAQEBBQADggEPADCCAQoCggEBAK3AKz7Jq8CGR75NcbuUKiLTJhSS0/TBGA9M
+k+OmradT5qWhFKbxUDoMwT4YpUTzkUGUzkGEVbUsrKK4XaYXldRoHOm8mS0aBErk
+g2ffmpi+TiGk5LHykZ0avmYeEsqVESAjVEMuU3fWJzZd4NfUcTKsBA7Ccqfnb3CB
+TS5fbAz/zw1K//XR5ZNCEBOsFD+0oFGKTNLCeMBCwccFNyVI2mNZpDA++HilNiQj
+TEJytBXGcMVZaS+Tc0vENfVWHAAtVdk8+dd6jkpNnDhK1W1TB7HvhScewyEGh9yb
+cK5asE8TBebEvUIrPaVFz+ef/o3lRev0Gq1QUYAoaG7ps9JlDcsCAwEAAaNQME4w
+HQYDVR0OBBYEFIKSLrYMY9fXpCS7OGnyxhS7JzRrMB8GA1UdIwQYMBaAFIKSLrYM
+Y9fXpCS7OGnyxhS7JzRrMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEB
+ABiu7+GH8WGNPqPUUHP17HHYK41xAyYoKSzCrELKmFLphYhnUQA6EeBY8rjYr3X0
+Z2O0F9J6Cik/kG/uBYW0Oi8PQ0EeSZwzvd+CsAc2EJAryOBpafWRXa2XrOtFkKjq
+jKWHSa0QJsBALiu8+JVfcwXYshbhmdVBxrktxMoY9WpGI7EcZkf77SW5enY4LtSF
+wuRr2lv29YADsa/Q7JV2I4oAbWUjW3513mR5JsefHPk7hXZbRCXqUxFTmWpnDomF
+HDeEDAdSgMgzODnbU/qHI9tmP6iDaCTz/eVfyCMKGYA0oIX1j5GdJ6HXK1OHafJK
+W/M9gDRhQKU0bTXC2CoEOAs=
+-----END CERTIFICATE-----
+_EOF_
+
+cat > /usr/share/kibana/config/kibana.example.org.key << _EOF_
+-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCtwCs+yavAhke+
+TXG7lCoi0yYUktP0wRgPTJPjpq2nU+aloRSm8VA6DME+GKVE85FBlM5BhFW1LKyi
+uF2mF5XUaBzpvJktGgRK5INn35qYvk4hpOSx8pGdGr5mHhLKlREgI1RDLlN31ic2
+XeDX1HEyrAQOwnKn529wgU0uX2wM/88NSv/10eWTQhATrBQ/tKBRikzSwnjAQsHH
+BTclSNpjWaQwPvh4pTYkI0xCcrQVxnDFWWkvk3NLxDX1VhwALVXZPPnXeo5KTZw4
+StVtUwex74UnHsMhBofcm3CuWrBPEwXmxL1CKz2lRc/nn/6N5UXr9BqtUFGAKGhu
+6bPSZQ3LAgMBAAECggEAKE5S+d7ItAGydOf8QTpux+NZix5Agx+kGDB4gi/xSsbA
+051ZcBy8sqqwzVnkROmHwcHmUvaC92NkrN6+AsCn5j08r9ArbHYDlugJv7f0YgiL
+kWxyDQGrW9mPX5sMWuhXr6/iZS9C96K7N/ZxKUBD/jA/RLlA5chfZqboI6DJLP5s
+u03ZW4toaGItLZtPxF07eElE4MGG/TbkoBZ5t79Y98TJP2oO95IpPQa8omqQcDEM
+w0DsbV/dJV9AtyZBfmIRNaG5beiIUH26OQzUJP7FP2eIN4F/CAXLdlMnHtQA1XJz
+QRwMxbfBQ+JfKD7YWedqivrjR0iPMx80M4HSU9DFaQKBgQDa+7F7zDRy4WU0GtfP
+g+ArDUMjQv5pTXA0b2hKjHJRXM3LVo5qNJYWlirHtPjkVL4BJSY+iVl9/lfV2Xrf
+gDXQLcUhABx5HNzZ5p+NyDHWrpZamFkfw9wLwQHXZGG8I+dla/iToHRWEH2QYxdz
+VvfntpyE7XbxzhPPiS5haHGerwKBgQDLHxPn/jm2dSHa6jAidJXFJCMblcDuwIBy
+7Cm7vnRro9Mbx/hZkRPXYWHQ/4WEVlWO9Sgkf4ambPSmdFg8ksQwBBd+l3K5K4Un
+2AIL/PqgZg+anoEYYn1sqiWSc+YiO2GiRaHh5wOWtekEBBH9HcYkmKIXm3JHVdSw
+SpQsryxppQKBgDi7qqDLJ+93a7PTHIRbwzEEL5esHKOFd4NuNZPSzS89HugGVcE4
+PIY/g3fX7/+f4NYFHOJozTGyOmlh/c53tfloUkEZeUb7blBZyo5+BkN7WeLAw55S
+LOkyqNp33EZU+vcwwObmVB2UCiPlOEceif2TNvvNVdqRrFpBTS3ZVE5rAoGAJivk
+9cgU2HESt60i9paqPq4X2us9oqCSgwZWoW2dO01CMwpVZZ+Z9vPaCgi68q+2zHLN
+5G4Cw+vd3honKtr5+3wJXkTfzmSbVW2GlPIpt1L2w7vdztNTdsRS4z7clLpMEs67
+KVTcm8n7zEFnkAW0YtQ8Qet4gmdi3O5nAi65TfECgYEA0Pw2X4R37IrYM7tFDJSz
+zDF4mRmk2qfhHBd8IaIDBpsXSgLcVRduro4HBzf/JeCt8rvw3VMLEFyqwyszpHro
+xNnqPvbMPMCtOvUcr1VtXnO7CzaFNCJrfjYdV8vmDgvbYmBEHzG+LGbnVZIBUhQa
+igVjtqU1uT83+VpR703IcBI=
+-----END PRIVATE KEY-----
+
+_EOF_
+ 
+cat > docker-compose.yml <<_EOF_
+version: '2'
+services:
+  kibana:
+    image: docker.elastic.co/kibana/kibana:5.4.2
+    ports:
+      - 5601:5601
+    volumes:
+      - /usr/share/kibana/config/:/usr/share/kibana/config/
+    networks:
+      - esnet
+  elasticsearch1:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.4.2
+    container_name: elasticsearch1
+    environment:
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - XPACK_MONITORING_ENABLED=false
+      - XPACK_SECURITY_ENABLED=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 1g
+    volumes:
+      - esdata1:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - esnet
+  elasticsearch2:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.4.2
+    environment:
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "discovery.zen.ping.unicast.hosts=elasticsearch1"
+      - XPACK_MONITORING_ENABLED=false
+      - XPACK_SECURITY_ENABLED=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      mem_limit: 1g
+    volumes:
+      - esdata2:/usr/share/elasticsearch/data
+    networks:
+      - esnet
+
+volumes:
+  esdata1:
+    driver: local
+  esdata2:
+    driver: local
+  kconf:
+    driver: local
+
+networks:
+  esnet:
+
+_EOF_
+
+docker-compose up
